@@ -1,9 +1,12 @@
 package exchange.sz.v5.binary.gateway;
 
+import com.engine.DataCache;
+import com.entity.Tick;
 import exchange.sz.v5.binary.annotation.SZV5Message;
 import exchange.sz.v5.binary.enums.SZV5MsgType;
 import exchange.sz.v5.binary.model.message.*;
 import lombok.extern.slf4j.Slf4j;
+import org.joda.time.DateTime;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -75,9 +78,52 @@ public class SZV5MessageFacade implements SZV5Gateway {
     @Override
     public void onLevel1Market(SZV5Level1MarketSnapshot level1MarketSnapshot) {
         String securityId = level1MarketSnapshot.getSecurityId().getValue();
-        if(securityId.equals("100303") || securityId.equals("100504")){
-            log.info("level1 -> {}", level1MarketSnapshot);
+        if(securityId.startsWith("000") || securityId.startsWith("300")){
+            try {
+                // 代码相关
+                String symbol = securityId; // 代码
+                String exchange ="SZ"; // 交易所代码
+                String rtSymbol = symbol+"."+exchange; // 系统中的唯一代码,通常是 合约代码.交易所代码
+                Long tradeTime = level1MarketSnapshot.getTradeTime();
+                String tradingDay="";       // 交易日
+                String actionDay="";        // 业务发生日
+                String actionTime = "";       // 时间(HHMMSSmmm)
+                DateTime dateTime = DateTime.now();
+
+                Integer status=1; // 状态
+
+                // 成交数据
+                Double lastPrice = level1MarketSnapshot.getLastPx(); // 最新成交价
+                Integer lastVolume = 0; // 最新成交量
+                Integer volume = 0; // 今天总成交量
+                Double openInterest = 0d; // 持仓量
+
+                Long preOpenInterest = 0L;// 昨持仓
+                Double preClosePrice = 0d; // 前收盘价
+                Double preSettlePrice = 0d; // 昨结算
+
+                // 常规行情
+                Double openPrice = level1MarketSnapshot.getOpenPx(); // 今日开盘价
+                Double highPrice = level1MarketSnapshot.getHighPx(); // 今日最高价
+                Double lowPrice = level1MarketSnapshot.getLowPx(); // 今日最低价
+
+                Double upperLimit = 0d; // 涨停价
+                Double lowerLimit = 0d; // 跌停价
+                Tick tick = new Tick();
+                tick.setTickValue("SZ", symbol, exchange, rtSymbol, tradingDay, actionDay, tradeTime, dateTime, 1, lastPrice, lastVolume, volume, preClosePrice, openPrice, highPrice, lowPrice);
+                //, bidPrice1, bidPrice2, bidPrice3, bidPrice4, bidPrice5, askPrice1, askPrice2, askPrice3, askPrice4, askPrice5, bidVolume1, bidVolume2, bidVolume3, bidVolume4, bidVolume5, askVolume1, askVolume2, askVolume3, askVolume4, askVolume5
+
+                //DataCache.TICKQUEUE.put(tick);
+                DataCache.BARQUEUE.put(tick);
+
+                log.info("level1 -> {}", level1MarketSnapshot);
+            }catch (Exception e){
+                e.printStackTrace();
+            }
         }
+//        if(securityId.equals("000001") || securityId.equals("100504")){
+//            log.info("level1 -> {}", level1MarketSnapshot);
+//        }
     }
 
     @Slf4j
